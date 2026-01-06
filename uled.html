@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Echo - Karaoke Microphone</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2em;
+            background: linear-gradient(45deg, #00d4ff, #7b2ff7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #999;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+
+        /* Mic Button */
+        .mic-button {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 3em;
+            cursor: pointer;
+            margin: 0 auto 20px;
+            display: block;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .mic-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 30px rgba(102, 126, 234, 0.6);
+        }
+
+        .mic-button.active {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+
+        .status {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        .status.on {
+            color: #4ade80;
+        }
+
+        .status.off {
+            color: #f87171;
+        }
+
+        /* Controls */
+        .control-group {
+            margin-bottom: 25px;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            color: #bbb;
+        }
+
+        .control-value {
+            color: #00d4ff;
+            font-weight: bold;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.5);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.5);
+        }
+
+        /* Presets */
+        .presets {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .preset-btn {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.3s ease;
+        }
+
+        .preset-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .preset-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Warning message */
+        .warning {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 0.85em;
+            color: #fbbf24;
+            text-align: center;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 25px;
+            }
+
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .mic-button {
+                width: 100px;
+                height: 100px;
+                font-size: 2.5em;
+            }
+
+            .presets {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 Live Echo</h1>
+        <div class="subtitle">Real-Time Karaoke Microphone</div>
+
+        <div class="warning">
+            🎧 Use headphones to prevent audio feedback!
+        </div>
+
+        <button class="mic-button" id="micBtn">🎤</button>
+        <div class="status off" id="status">Microphone OFF</div>
+
+        <!-- Volume Control -->
+        <div class="control-group">
+            <div class="control-label">
+                <span>🔊 Volume</span>
+                <span class="control-value" id="volumeValue">80%</span>
+            </div>
+            <input type="range" id="volume" min="0" max="100" value="80">
+        </div>
+
+        <!-- Echo Delay -->
+        <div class="control-group">
+            <div class="control-label">
+                <span>⏱️ Echo Delay</span>
+                <span class="control-value" id="delayValue">200ms</span>
+            </div>
+            <input type="range" id="delay" min="0" max="1000" value="200">
+        </div>
+
+        <!-- Echo Decay -->
+        <div class="control-group">
+            <div class="control-label">
+                <span>🔁 Echo Decay</span>
+                <span class="control-value" id="decayValue">40%</span>
+            </div>
+            <input type="range" id="decay" min="0" max="90" value="40">
+        </div>
+
+        <!-- Echo Mix -->
+        <div class="control-group">
+            <div class="control-label">
+                <span>🎚️ Echo Mix (Dry/Wet)</span>
+                <span class="control-value" id="mixValue">50%</span>
+            </div>
+            <input type="range" id="mix" min="0" max="100" value="50">
+        </div>
+
+        <!-- Presets -->
+        <div class="presets">
+            <button class="preset-btn" data-preset="room">Small Room</button>
+            <button class="preset-btn" data-preset="hall">Hall</button>
+            <button class="preset-btn" data-preset="stadium">Stadium</button>
+        </div>
+    </div>
+
+    <script>
+        // Audio context and nodes
+        let audioContext = null;
+        let micStream = null;
+        let sourceNode = null;
+        let delayNode = null;
+        let feedbackNode = null;
+        let dryGainNode = null;
+        let wetGainNode = null;
+        let masterGainNode = null;
+        let isActive = false;
+
+        // DOM elements
+        const micBtn = document.getElementById('micBtn');
+        const status = document.getElementById('status');
+        const volumeSlider = document.getElementById('volume');
+        const delaySlider = document.getElementById('delay');
+        const decaySlider = document.getElementById('decay');
+        const mixSlider = document.getElementById('mix');
+        const volumeValue = document.getElementById('volumeValue');
+        const delayValue = document.getElementById('delayValue');
+        const decayValue = document.getElementById('decayValue');
+        const mixValue = document.getElementById('mixValue');
+        const presetBtns = document.querySelectorAll('.preset-btn');
+
+        // Initialize audio graph
+        function initAudio() {
+            // Create audio context with low latency
+            audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                latencyHint: 'interactive',
+                sampleRate: 44100
+            });
+
+            // Create delay node for echo effect
+            delayNode = audioContext.createDelay(2.0);
+            delayNode.delayTime.value = delaySlider.value / 1000;
+
+            // Create feedback gain (echo decay)
+            feedbackNode = audioContext.createGain();
+            feedbackNode.gain.value = decaySlider.value / 100;
+
+            // Create dry signal gain (original voice)
+            dryGainNode = audioContext.createGain();
+            dryGainNode.gain.value = 1 - (mixSlider.value / 100);
+
+            // Create wet signal gain (echo)
+            wetGainNode = audioContext.createGain();
+            wetGainNode.gain.value = mixSlider.value / 100;
+
+            // Create master volume control
+            masterGainNode = audioContext.createGain();
+            masterGainNode.gain.value = volumeSlider.value / 100;
+
+            // Connect feedback loop: delay -> feedback -> delay
+            delayNode.connect(feedbackNode);
+            feedbackNode.connect(delayNode);
+        }
+
+        // Start microphone
+        async function startMic() {
+            try {
+                // Request microphone access
+                micStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false,
+                        latency: 0
+                    }
+                });
+
+                // Initialize audio if not already done
+                if (!audioContext) {
+                    initAudio();
+                }
+
+                // Resume audio context if suspended
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+
+                // Create source from microphone stream
+                sourceNode = audioContext.createMediaStreamSource(micStream);
+
+                // Audio graph routing:
+                // Microphone -> [Dry Path -> dryGain] -> Master -> Speakers
+                //            -> [Wet Path -> delay -> wetGain] -> Master -> Speakers
+                //                          -> feedback -> delay (loop)
+
+                // Dry path (original voice)
+                sourceNode.connect(dryGainNode);
+                dryGainNode.connect(masterGainNode);
+
+                // Wet path (echo effect)
+                sourceNode.connect(delayNode);
+                delayNode.connect(wetGainNode);
+                wetGainNode.connect(masterGainNode);
+
+                // Connect to speakers
+                masterGainNode.connect(audioContext.destination);
+
+                // Update UI
+                isActive = true;
+                micBtn.classList.add('active');
+                status.textContent = 'Microphone ON';
+                status.classList.remove('off');
+                status.classList.add('on');
+
+            } catch (err) {
+                console.error('Error accessing microphone:', err);
+                alert('Could not access microphone. Please grant permission and try again.');
+            }
+        }
+
+        // Stop microphone
+        function stopMic() {
+            if (micStream) {
+                micStream.getTracks().forEach(track => track.stop());
+                micStream = null;
+            }
+
+            if (sourceNode) {
+                sourceNode.disconnect();
+                sourceNode = null;
+            }
+
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+
+            isActive = false;
+            micBtn.classList.remove('active');
+            status.textContent = 'Microphone OFF';
+            status.classList.remove('on');
+            status.classList.add('off');
+        }
+
+        // Toggle microphone
+        micBtn.addEventListener('click', () => {
+            if (isActive) {
+                stopMic();
+            } else {
+                startMic();
+            }
+        });
+
+        // Volume control
+        volumeSlider.addEventListener('input', (e) => {
+            const value = e.target.value;
+            volumeValue.textContent = value + '%';
+            if (masterGainNode) {
+                masterGainNode.gain.value = value / 100;
+            }
+        });
+
+        // Echo delay control
+        delaySlider.addEventListener('input', (e) => {
+            const value = e.target.value;
+            delayValue.textContent = value + 'ms';
+            if (delayNode) {
+                delayNode.delayTime.value = value / 1000;
+            }
+        });
+
+        // Echo decay control
+        decaySlider.addEventListener('input', (e) => {
+            const value = e.target.value;
+            decayValue.textContent = value + '%';
+            if (feedbackNode) {
+                // Cap at 0.9 to prevent runaway feedback
+                feedbackNode.gain.value = value / 100;
+            }
+        });
+
+        // Echo mix control (dry/wet)
+        mixSlider.addEventListener('input', (e) => {
+            const value = e.target.value;
+            mixValue.textContent = value + '%';
+            if (dryGainNode && wetGainNode) {
+                dryGainNode.gain.value = 1 - (value / 100);
+                wetGainNode.gain.value = value / 100;
+            }
+        });
+
+        // Preset configurations
+        const presets = {
+            room: { delay: 120, decay: 30, mix: 35 },
+            hall: { delay: 250, decay: 50, mix: 55 },
+            stadium: { delay: 400, decay: 65, mix: 70 }
+        };
+
+        presetBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const preset = btn.dataset.preset;
+                const config = presets[preset];
+
+                delaySlider.value = config.delay;
+                decaySlider.value = config.decay;
+                mixSlider.value = config.mix;
+
+                // Update displays
+                delayValue.textContent = config.delay + 'ms';
+                decayValue.textContent = config.decay + '%';
+                mixValue.textContent = config.mix + '%';
+
+                // Apply to audio nodes
+                if (delayNode) delayNode.delayTime.value = config.delay / 1000;
+                if (feedbackNode) feedbackNode.gain.value = config.decay / 100;
+                if (dryGainNode) dryGainNode.gain.value = 1 - (config.mix / 100);
+                if (wetGainNode) wetGainNode.gain.value = config.mix / 100;
+            });
+        });
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            stopMic();
+        });
+    </script>
+</body>
+</html>
